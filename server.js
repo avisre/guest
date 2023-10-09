@@ -41,10 +41,7 @@ const ExcelData = mongoose.model('ExcelData', {
   iLabID: String,
   runFolder: String,
   runType: String,
-  clicked: {
-    type: Boolean,
-    default: false,
-  },
+ 
 });
 
 // Passport.js configuration
