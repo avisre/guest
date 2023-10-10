@@ -32,6 +32,7 @@ const User = mongoose.model('User', {
 const ExcelData = mongoose.model('ExcelData', {
   username: String,
   password: String,
+  projectId:String,
   customerName: String,
   speciesName: String,
   sequencingID: String,
@@ -41,7 +42,10 @@ const ExcelData = mongoose.model('ExcelData', {
   iLabID: String,
   runFolder: String,
   runType: String,
- 
+  clicked: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Passport.js configuration
@@ -132,64 +136,8 @@ app.get('/login', (req, res) => {
 });
 
 
-app.post('/upload', upload.single('file'), (req, res) => {
-  try {
-    const file = req.file;
 
-    if (!file) {
-      throw new Error('No file uploaded.');
-    }
 
-    const workbook = XLSX.readFile(file.path);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const sheet2 = workbook.Sheets[workbook.SheetNames[1]];
-
-    const customerNames = sheet['D5']?.v.split(',').map(name => name.trim()) || [''];
-    const iLabIDs = sheet['B5']?.v.split(',').map(id => id.trim()) || [''];
-
-    // Handle mismatched number of customer names and iLab IDs
-    const minLength = Math.min(customerNames.length, iLabIDs.length);
-    const trimmedCustomerNames = customerNames.slice(0, minLength);
-    const trimmedILabIDs = iLabIDs.slice(0, minLength);
-
-    const excelDataArray = trimmedCustomerNames.map((customerName, index) => {
-      const speciesName = sheet['I5']?.v || '';
-      const sequencingID = sheet['J1']?.v || '';
-      const kitType = sheet['F1']?.v || '';
-      const name = sheet['M1']?.v || '';
-      const dateCell = sheet['M2'];
-      const datee = (dateCell && dateCell.w) ? moment(dateCell.w).format('YYYY-MM-DD') : '';
-      const iLabID = trimmedILabIDs[index];
-      const runFolder = sheet2['B1']?.v || '';
-      const runType = sheet2['B2']?.v || '';
-
-      return new ExcelData({
-        customerName,
-        speciesName,
-        sequencingID,
-        kitType,
-        name,
-        datee,
-        iLabID,
-        runFolder,
-        runType,
-      });
-    });
-
-    ExcelData.insertMany(excelDataArray)
-      .then(savedData => {
-        console.log('Excel data saved to MongoDB:', savedData);
-        res.redirect('/index');
-      })
-      .catch(error => {
-        console.error('Error saving Excel data:', error);
-        res.status(500).send('Internal Server Error');
-      });
-  } catch (error) {
-    console.error('Error processing uploaded file:', error);
-    res.status(400).send('Bad Request: Invalid file format or structure.');
-  }
-});
 
 
 app.get('/data', async (req, res) => {
@@ -202,45 +150,9 @@ app.get('/data', async (req, res) => {
   }
 });
 
-app.post('/generate-project-ids', (req, res) => {
-  // Generate project IDs for the new data (replace this with your actual logic)
-  const generatedProjectIds = generateProjectIdsForNewData();
-
-  // Assuming generatedProjectIds is an array of generated project IDs
-  res.json(generatedProjectIds);
-});
-
-app.put('/update/:id', async (req, res) => {
-  const { id } = req.params;
-  const { clicked, ...editedData } = req.body; // Extract clicked and other edited data properties
-
-  try {
-      const updatedDocument = await ExcelData.findByIdAndUpdate(id, { clicked, ...editedData }, { new: true });
-      // 'clicked' attribute and other edited data properties are updated in the database, and the updated document is returned
-
-      res.json(updatedDocument);
-  } catch (error) {
-      console.error('Error updating document:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
 
 
-app.delete('/delete/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const deletedData = await ExcelData.findByIdAndDelete(id);
 
-    if (!deletedData) {
-      return res.status(404).json({ error: 'Data not found' });
-    }
-
-    res.status(204).send(); // Send a success response with no content (HTTP status 204)
-  } catch (error) {
-    console.error('Error deleting data:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
