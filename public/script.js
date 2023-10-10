@@ -3,7 +3,7 @@ const fetchDataButton = document.getElementById('fetchDataButton');
 const dataTable = document.getElementById('dataTable');
 const loadingFeedback = document.getElementById('loadingFeedback');
 const downloadFeedback = document.getElementById('downloadFeedback');
-let rowCount = 1000; // Counter variable to track the number of rows created
+ // Counter variable to track the number of rows created
 
 uploadForm.addEventListener('submit', handleUpload);
 fetchDataButton.addEventListener('click', fetchData);
@@ -51,24 +51,11 @@ function fetchData() {
         });
 }
 
-function generateProjectIds(rowData, index,sequenceNumber) {
-    const customerNames = rowData.customerName.split(',').map(name => name.trim());
-    const iLabIDs = rowData.iLabID.split(',').map(id => id.trim());
-    const data = [];
-    customerNames.forEach((name, idx) => {
-        sequenceNumber++; // Increment sequenceNumber for every new row added
-        const lastName = name.split(' ').pop().trim();
-        const projectId = `${sequenceNumber}_${rowData.sequencingID}_${lastName}`; // Include rowCount in projectId
-        const iLabID = iLabIDs[idx] || '';
-        const fullName = name;
-        data.push({ projectId, iLabID, fullName });
-    });
-    return data;
-}
+
 function renderData(data) {
     dataTable.innerHTML = '';
 
-    const headers = ['Project:ID', 'ilabID', 'Status', 'Customer Name', 'Species Name', 'Sequencing ID', 'Kit Type', 'Name', 'Datee', 'Run Folder', 'Run Type'];
+    const headers = ['Status', 'Project ID:', 'Customer Name', 'Species Name', 'Sequencing ID', 'Kit Type', 'Name', 'Date', 'iLabID', 'Run Folder', 'Run Type'];
 
     const headerRow = dataTable.insertRow();
 
@@ -78,61 +65,30 @@ function renderData(data) {
         headerRow.appendChild(headerCell);
     });
 
-    let sequenceNumber = rowCount;
     data.forEach((rowData, index) => {
-        const projectIdsAndNames = generateProjectIds(rowData, index, sequenceNumber);
+        const dataRow = dataTable.insertRow();
+        dataRow.dataset.id = rowData._id;
 
-        projectIdsAndNames.forEach(({ projectId, iLabID, fullName }) => {
-            const dataRow = dataTable.insertRow();
-            dataRow.dataset.id = rowData._id;
+        const checkboxCell = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = rowData.clicked;
+        checkbox.disabled = true; // Disable checkbox
+        checkboxCell.appendChild(checkbox);
+        dataRow.appendChild(checkboxCell);
 
-            const projectIdCell = document.createElement('td');
-            projectIdCell.textContent = projectId;
-            dataRow.appendChild(projectIdCell);
-
-            const iLabIDCell = document.createElement('td');
-            iLabIDCell.textContent = iLabID;
-            dataRow.appendChild(iLabIDCell);
-
-            const checkboxCell = document.createElement('td');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = rowData.clicked;
-            checkbox.addEventListener('change', function() {
-                const isChecked = this.checked;
-                fetch(`/updatee/${rowData._id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ clicked: isChecked }),
-                })
-                .then(response => {
-                    if (response.ok) {
-                        console.log('Data updated successfully');
-                    } else {
-                        console.error('Failed to update data');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error updating data:', error);
-                });
-            });
-            checkboxCell.appendChild(checkbox);
-            dataRow.appendChild(checkboxCell);
-
-            const fullNameCell = document.createElement('td');
-            fullNameCell.textContent = fullName;
-            dataRow.appendChild(fullNameCell);
-
-            const dataCells = [rowData.speciesName, rowData.sequencingID, rowData.kitType, rowData.name, rowData.datee, rowData.runFolder, rowData.runType];
-            dataCells.forEach(cellText => {
-                const dataCell = document.createElement('td');
-                dataCell.textContent = cellText;
-                dataRow.appendChild(dataCell);
-            });
-
-            sequenceNumber++;
+        const dataCells = [rowData.projectId,rowData.customerName,rowData.speciesName, rowData.sequencingID, rowData.kitType, rowData.name, rowData.datee,rowData.iLabID, rowData.runFolder, rowData.runType];
+        dataCells.forEach(cellText => {
+            const dataCell = document.createElement('td');
+            dataCell.textContent = cellText;
+            dataRow.appendChild(dataCell);
         });
+
+        // Set background color based on checkbox state
+        if (rowData.clicked) {
+            checkboxCell.style.backgroundColor = 'green';
+        } else {
+            checkboxCell.style.backgroundColor = 'red';
+        }
     });
 }
